@@ -6,7 +6,7 @@ from bot import *
 # Создаём окошко
 WIDTH = 1100
 HEIGHT = 800
-FPS = 10
+FPS = 30
 pygame.init()
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.font.init()
@@ -19,7 +19,7 @@ COLORS = {"RED": (255, 0, 0),
           "BLUE": (0, 0, 255),
           "WHITE": (255, 255, 255),
           "BLACK": (0, 0, 0),
-          "GRAY": (77, 77, 77)}
+          "GRAY": (70, 70, 70)}
 
 COLORS_NEIGH = [(255, 0, 0),
                 (255, 150, 0),
@@ -65,6 +65,8 @@ epoch = 0
 earthPole = 0
 meteors = 0
 totalMeteors = 0
+viruses = 0
+totalViruses = 0
 # Режимы отображения
 displayMode = 'Обычный'
 showBorder = 0
@@ -87,18 +89,24 @@ def InitField():
 
 def SetColor(i, j):
     if cases[i][j] is not None:
-        if showEnergy:
-            d = int((255 / 1000) * cases[i][j].energy)
-            if d < 0:
-                d = 0
-            if d > 255:
-                d = 255
-            return (255, d, 0)
-        elif showClans:
-            c = cases[i][j].code - 1
-            return COLORS_CLANS[c]
+        if cases[i][j].isAlive:
+            if showEnergy:
+                d = int((255 / cases[i][j].energyMax) * cases[i][j].energy)
+                if d < 0:
+                    d = 0
+                if d > 255:
+                    d = 255
+                return (255, d, 0)
+            elif showClans:
+                if cases[i][j].code == 999:
+                    return (0, 0, 0)
+                else:
+                    c = cases[i][j].code - 1
+                    return COLORS_CLANS[c]
+            else:
+                return cases[i][j].color
         else:
-            return COLORS["GREEN"]
+            return COLORS["GRAY"]
     else:
         return COLORS["WHITE"]
 
@@ -125,6 +133,10 @@ def DrawStats():
     screen.blit(metText, (810, 100))
     met2Text = font.render(f'Новые метеориты: {meteors}', True, (255, 255, 255))
     screen.blit(met2Text, (810, 130))
+    virText = font.render(f'Всего вирусов: {totalViruses}', True, (255, 255, 255))
+    screen.blit(virText, (810, 160))
+    vir2Text = font.render(f'Новые вирусы: {viruses}', True, (255, 255, 255))
+    screen.blit(vir2Text, (810, 190))
 
 
 # Проверка на пограничных соседей
@@ -137,14 +149,11 @@ def inBounds(x, y):
 # Запоминание клеток
 def FindNearCases(x, y, r):
     nearCases = []
-    counter = 0
     if cases[x][y] is not None:
         for sx in range(-r, r + 1):
             for sy in range(-r, r + 1):
                 if inBounds(x + sx, y + sy) and x != x + sx and y != y + sy:
                     nearCases.append([x + sx, y + sy])
-                if inBounds(x + sx, y + sy) and x != x + sx and y != y + sy and cases[x + sx][y + sy] is not None:
-                    counter += 1
     return nearCases
 
 # Поиск пустых клеток рядом
@@ -163,7 +172,7 @@ def FindNearFriends(x, y, r):
     if cases[x][y] is not None:
         for sx in range(-r, r + 1):
             for sy in range(-r, r + 1):
-                if inBounds(x + sx, y + sy) and x != x + sx and y != y + sy and cases[x + sx][y + sy] is not None:
+                if inBounds(x + sx, y + sy) and x != x + sx and y != y + sy and cases[x + sx][y + sy] is not None and cases[x + sx][y + sy].isAlive:
                     if  cases[x][y].code == cases[x + sx][y + sy].code:
                         nearCases.append([x + sx, y + sy])
     return nearCases
@@ -175,7 +184,7 @@ def FindNearEnemies(x, y, r):
         for sx in range(-r, r + 1):
             for sy in range(-r, r + 1):
                 if inBounds(x + sx, y + sy) and x != x + sx and y != y + sy and cases[x + sx][y + sy] is not None:
-                    if  cases[x][y].code != cases[x + sx][y + sy].code:
+                    if cases[x][y].code != cases[x + sx][y + sy].code or not cases[x + sx][y + sy].isAlive:
                         nearCases.append([x + sx, y + sy])
     return nearCases
 
@@ -184,7 +193,7 @@ def CreateCase(x, y, c):
 
 # Уничтожаем клетку
 def DestroyCase(x, y):
-    cases[x][y] = None
+    cases[x][y].isAlive = False
 
 def CreateChild(i, j):
     empty = FindNearEmpty(i, j, 1)
@@ -216,10 +225,14 @@ def WatchAround():
     pass
 
 def LifeCase(i, j):
-    if cases[i][j].energy < 1000:
+    if cases[i][j].energy <= 0:
+        cases[i][j].isAlive = False
+        return
+
+    if cases[i][j].energy < cases[i][j].energyMax:
         cases[i][j].energy += cases[i][j].energyGain * (cases[i][j].energyLvl + 1)
-    if cases[i][j].energy > 1000:
-        cases[i][j].energy = 1000
+    if cases[i][j].energy > cases[i][j].energyMax:
+        cases[i][j].energy = cases[i][j].energyMax
 
     rnd = random.randint(0, 3)
     if rnd == 0:
@@ -243,12 +256,16 @@ def LifeCase(i, j):
         enemies = FindNearEnemies(i, j, 1)
         for e in enemies:
             if cases[i][j] is not None and cases[e[0]][e[1]] is not None:
-                if cases[i][j].energy >= cases[e[0]][e[1]].energy:
-                    cases[i][j].energy -= cases[e[0]][e[1]].energy
-                    DestroyCase(e[0], e[1])
+                if cases[e[0]][e[1]].isAlive:
+                    if cases[i][j].energy >= cases[e[0]][e[1]].energy:
+                        cases[i][j].energy -= cases[e[0]][e[1]].energy
+                        DestroyCase(e[0], e[1])
+                    else:
+                        cases[e[0]][e[1]].energy -= cases[i][j].energy
+                        DestroyCase(i, j)
                 else:
-                    cases[e[0]][e[1]].energy -= cases[i][j].energy
-                    DestroyCase(i, j)
+                    cases[i][j].energy += int(cases[e[0]][e[1]].energy * 0.5)
+                    cases[e[0]][e[1]] = None
 
 # На 7 день Бог зациклил жизнь ...
 def CycleLife():
@@ -259,16 +276,17 @@ def CycleLife():
     for i in range(0, fieldWidth):
         for j in range(0, fieldHeight):
             if cases[i][j] is not None:
-                LifeCase(i, j)
+                if cases[i][j].isAlive:
+                    LifeCase(i, j)
 
 # А на 8-й решил порофлить :D
 def RandomEvent():
-    rnd = random.randint(0, 1)
+    rnd = random.randint(0, 2)
     global earthPole
     if rnd == 0:
         for i in range(fieldWidth):
             for j in range(fieldHeight):
-                if cases[i][j] is not None:
+                if cases[i][j] is not None and cases[i][j].isAlive:
                     if earthPole == 0:
                         cases[i][j].energyLvl = j
                     else:
@@ -287,10 +305,18 @@ def RandomEvent():
             lny = random.randint(0, fieldHeight - 1)
             for i in range(-size, size + 1):
                 for j in range(-size, size + 1):
-                    if inBounds(lnx + i, lny + j) and lnx != lnx + i and lny != lny + j:
-                        cases[lnx + i][lny + j] = None
+                    if inBounds(lnx + i, lny + j) and lnx != lnx + i and lny != lny + j and cases[lnx + i][lny + j] is not None:
+                        cases[lnx + i][lny + j].energy -= random.randrange(700, 100000)
     elif rnd == 2:
-        pass
+        global viruses
+        global totalViruses
+        vir = random.randint(1, 100)
+        totalViruses += vir
+        viruses = vir
+        for i in range(vir):
+            sx = random.randint(0, fieldWidth - 1)
+            sy = random.randint(0, fieldHeight - 1)
+            cases[sx][sy] = Bot(sx, sy, 999)
     else:
         pass
 

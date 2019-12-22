@@ -20,6 +20,15 @@ class Bot(object):
         self.energyLvl = y
         self.code = code
         self.mindMove = [0, 0]
+        self.isAlive = True
+
+        if code == 999:
+            self.energy = 1000
+            self.energyMax = 10000
+            self.energyGain = 1000
+            self.divideEnergy = 10000
+            self.maxDivisions = 8
+            self.color = (0, 0, 0)
 
         # Мозги
         self.brain = [[0 for i in range(2)] for j in range(2)]
