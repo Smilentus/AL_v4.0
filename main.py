@@ -221,9 +221,6 @@ def Move(i, j):
         cases[dir[0]][dir[1]] = cases[i][j]
         cases[i][j] = None
 
-def WatchAround():
-    pass
-
 def LifeCase(i, j):
     if cases[i][j].energy <= 0:
         cases[i][j].isAlive = False
