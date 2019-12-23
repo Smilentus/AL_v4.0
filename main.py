@@ -80,12 +80,14 @@ cases = [[None for x in range(0, fieldWidth)] for y in range(0, fieldHeight)]
 # Карта для отрисовки ячеек
 gameFieldUI = [[None for x in range(0, fieldWidth)] for y in range(0, fieldHeight)]
 
+
 # Заполнение жизни
 def InitField():
     for i in range(0, fieldWidth):
         for j in range(0, fieldHeight):
             if random.randint(0, 101) in range(0, 5):
                 CreateCase(i, j, random.randint(1, clans + 1))
+
 
 def SetColor(i, j):
     if cases[i][j] is not None:
@@ -110,6 +112,7 @@ def SetColor(i, j):
     else:
         return COLORS["WHITE"]
 
+
 # Отрисовка поля
 def DrawField():
     for i in range(0, fieldWidth):
@@ -118,7 +121,8 @@ def DrawField():
     # Отрисовываем статы
     DrawStats()
     # Двойная буферизация
-    pygame.display.flip()   
+    pygame.display.flip()
+
 
 def DrawStats():
     pygame.draw.rect(screen, (69, 69, 69), Rect(800, 0, 300, 800), 0)
@@ -146,6 +150,7 @@ def inBounds(x, y):
     else:
         return True
 
+
 # Запоминание клеток
 def FindNearCases(x, y, r):
     nearCases = []
@@ -155,6 +160,7 @@ def FindNearCases(x, y, r):
                 if inBounds(x + sx, y + sy) and x != x + sx and y != y + sy:
                     nearCases.append([x + sx, y + sy])
     return nearCases
+
 
 # Поиск пустых клеток рядом
 def FindNearEmpty(x, y, r):
@@ -166,16 +172,19 @@ def FindNearEmpty(x, y, r):
                     nearCases.append([x + sx, y + sy])
     return nearCases
 
+
 # Поиск близких друзей
 def FindNearFriends(x, y, r):
     nearCases = []
     if cases[x][y] is not None:
         for sx in range(-r, r + 1):
             for sy in range(-r, r + 1):
-                if inBounds(x + sx, y + sy) and x != x + sx and y != y + sy and cases[x + sx][y + sy] is not None and cases[x + sx][y + sy].isAlive:
-                    if  cases[x][y].code == cases[x + sx][y + sy].code:
+                if inBounds(x + sx, y + sy) and x != x + sx and y != y + sy and cases[x + sx][y + sy] is not None and \
+                        cases[x + sx][y + sy].isAlive:
+                    if cases[x][y].code == cases[x + sx][y + sy].code:
                         nearCases.append([x + sx, y + sy])
     return nearCases
+
 
 # Поиск близких противников
 def FindNearEnemies(x, y, r):
@@ -188,12 +197,15 @@ def FindNearEnemies(x, y, r):
                         nearCases.append([x + sx, y + sy])
     return nearCases
 
+
 def CreateCase(x, y, c):
     cases[x][y] = Bot(x, y, c)
+
 
 # Уничтожаем клетку
 def DestroyCase(x, y):
     cases[x][y].isAlive = False
+
 
 def CreateChild(i, j):
     empty = FindNearEmpty(i, j, 1)
@@ -206,6 +218,7 @@ def CreateChild(i, j):
             else:
                 break
 
+
 def AnalysisMovement(i, j):
     moveCases = FindNearEmpty(i, j, 1)
     if len(moveCases) >= 1:
@@ -215,11 +228,13 @@ def AnalysisMovement(i, j):
         moveDir = (i, j)
     return (moveDir[0], moveDir[1])
 
+
 def Move(i, j):
     dir = AnalysisMovement(i, j)
     if dir[0] != i and dir[1] != j:
         cases[dir[0]][dir[1]] = cases[i][j]
         cases[i][j] = None
+
 
 def LifeCase(i, j):
     if cases[i][j].energy <= 0:
@@ -264,6 +279,7 @@ def LifeCase(i, j):
                     cases[i][j].energy += int(cases[e[0]][e[1]].energy * 0.5)
                     cases[e[0]][e[1]] = None
 
+
 # На 7 день Бог зациклил жизнь ...
 def CycleLife():
     global epoch
@@ -275,6 +291,7 @@ def CycleLife():
             if cases[i][j] is not None:
                 if cases[i][j].isAlive:
                     LifeCase(i, j)
+
 
 # А на 8-й решил порофлить :D
 def RandomEvent():
@@ -302,7 +319,8 @@ def RandomEvent():
             lny = random.randint(0, fieldHeight - 1)
             for i in range(-size, size + 1):
                 for j in range(-size, size + 1):
-                    if inBounds(lnx + i, lny + j) and lnx != lnx + i and lny != lny + j and cases[lnx + i][lny + j] is not None:
+                    if inBounds(lnx + i, lny + j) and lnx != lnx + i and lny != lny + j and cases[lnx + i][
+                        lny + j] is not None:
                         cases[lnx + i][lny + j].energy -= random.randrange(700, 100000)
     elif rnd == 2:
         global viruses
@@ -316,6 +334,7 @@ def RandomEvent():
             cases[sx][sy] = Bot(sx, sy, 999)
     else:
         pass
+
 
 def StartGame():
     InitField()
@@ -356,7 +375,7 @@ def StartGame():
         # Визуализация
         DrawField()
     pygame.quit()
-    
+
 
 if __name__ == '__main__':
     StartGame()
