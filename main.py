@@ -60,13 +60,19 @@ caseSize = 8
 fieldWidth = 100
 fieldHeight = 100
 clans = 10
-event = 100
+event = 50
 epoch = 0
 earthPole = 0
 meteors = 0
 totalMeteors = 0
 viruses = 0
 totalViruses = 0
+mercy = 0
+totalMercy = 0
+currentAlive = 0
+currentDead = 0
+totalAlive = 0
+totalDead = 0
 # Режимы отображения
 displayMode = 'Обычный'
 showBorder = 0
@@ -141,6 +147,18 @@ def DrawStats():
     screen.blit(virText, (810, 160))
     vir2Text = font.render(f'Новые вирусы: {viruses}', True, (255, 255, 255))
     screen.blit(vir2Text, (810, 190))
+    mercyText = font.render(f'Всего воскрешений: {totalMercy}', True, (255, 255, 255))
+    screen.blit(mercyText, (810, 220))
+    mercy2Text = font.render(f'Воскрешений: {mercy}', True, (255, 255, 255))
+    screen.blit(mercy2Text, (810, 250))
+    aliveText = font.render(f'Всего живых: {totalAlive}', True, (255, 255, 255))
+    screen.blit(aliveText, (810, 280))
+    alive2Text = font.render(f'Живых: {currentAlive}', True, (255, 255, 255))
+    screen.blit(alive2Text, (810, 310))
+    deadText = font.render(f'Всего мёртвых: {totalDead}', True, (255, 255, 255))
+    screen.blit(deadText, (810, 340))
+    dead2Text = font.render(f'Мёртвые: {currentDead}', True, (255, 255, 255))
+    screen.blit(dead2Text, (810, 370))
 
 
 # Проверка на пограничных соседей
@@ -200,11 +218,15 @@ def FindNearEnemies(x, y, r):
 
 def CreateCase(x, y, c):
     cases[x][y] = Bot(x, y, c)
+    global totalAlive
+    totalAlive += 1
 
 
 # Уничтожаем клетку
 def DestroyCase(x, y):
     cases[x][y].isAlive = False
+    global totalDead
+    totalDead += 1
 
 
 def CreateChild(i, j):
@@ -237,8 +259,14 @@ def Move(i, j):
 
 
 def LifeCase(i, j):
+    if not cases[i][j].isAlive:
+        return
+
+    global totalDead
+
     if cases[i][j].energy <= 0:
         cases[i][j].isAlive = False
+        totalDead += 1
         return
 
     if cases[i][j].energy < cases[i][j].energyMax:
@@ -252,15 +280,15 @@ def LifeCase(i, j):
     elif rnd == 1:
         friends = FindNearFriends(i, j, 1)
         for f in friends:
-            if cases[i][j].energy > cases[f[0]][f[1]].energy:
-                nrg = cases[i][j].energy
-                if 1000 - cases[f[0]][f[1]].energy >= nrg:
+            if cases[i][j].energy >= 50:
+                nrg = cases[i][j].energy - 25
+                if cases[i][j].energyMax - cases[f[0]][f[1]].energy >= nrg:
                     cases[i][j].energy -= nrg
                     cases[f[0]][f[1]].energy += nrg
                     break
                 else:
-                    cases[i][j].energy -= 1000 - cases[f[0]][f[1]].energy
-                    cases[f[0]][f[1]].energy = 1000
+                    cases[i][j].energy -= cases[i][j].energyMax - cases[f[0]][f[1]].energy
+                    cases[f[0]][f[1]].energy = cases[i][j].energyMax
                     break
     elif rnd == 2:
         CreateChild(i, j)
@@ -283,6 +311,10 @@ def LifeCase(i, j):
 # На 7 день Бог зациклил жизнь ...
 def CycleLife():
     global epoch
+    global currentAlive
+    global currentDead
+    currentDead = 0
+    currentAlive = 0
     epoch += 1
     if epoch % event == 0:
         RandomEvent()
@@ -290,12 +322,15 @@ def CycleLife():
         for j in range(0, fieldHeight):
             if cases[i][j] is not None:
                 if cases[i][j].isAlive:
+                    currentAlive += 1
                     LifeCase(i, j)
+                else:
+                    currentDead += 1
 
 
 # А на 8-й решил порофлить :D
 def RandomEvent():
-    rnd = random.randint(0, 2)
+    rnd = random.randint(0, 3)
     global earthPole
     if rnd == 0:
         for i in range(fieldWidth):
@@ -319,19 +354,33 @@ def RandomEvent():
             lny = random.randint(0, fieldHeight - 1)
             for i in range(-size, size + 1):
                 for j in range(-size, size + 1):
-                    if inBounds(lnx + i, lny + j) and lnx != lnx + i and lny != lny + j and cases[lnx + i][
-                        lny + j] is not None:
-                        cases[lnx + i][lny + j].energy -= random.randrange(700, 100000)
+                    if inBounds(lnx + i, lny + j) and lnx != lnx + i and lny != lny + j and cases[lnx + i][lny + j] is not None:
+                        cases[lnx + i][lny + j].energy -= random.randrange(700, 10000)
     elif rnd == 2:
         global viruses
         global totalViruses
-        vir = random.randint(1, 100)
+        vir = random.randint(1, 10)
         totalViruses += vir
         viruses = vir
         for i in range(vir):
             sx = random.randint(0, fieldWidth - 1)
             sy = random.randint(0, fieldHeight - 1)
             cases[sx][sy] = Bot(sx, sy, 999)
+    elif rnd == 3:
+        global mercy
+        global totalMercy
+        mercy = 0
+        count = random.randint(5, 25)
+        for c in range(count):
+            sx = random.randint(0, fieldWidth - 1)
+            sy = random.randint(0, fieldWidth - 1)
+            code = random.randint(1, clans + 1)
+            for i in range(-5, 6):
+                for j in range(-5, 6):
+                    if inBounds(sx + i, sy + j) and cases[sx + i][sy + j] is not None and not cases[sx + i][sy + j].isAlive:
+                        CreateCase(sx + i, sy + j, code)
+                        mercy += 1
+                        totalMercy += 1
     else:
         pass
 

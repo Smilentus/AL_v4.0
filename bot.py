@@ -19,10 +19,10 @@ class Bot(object):
         self.isAlive = True
 
         if code == 999:
-            self.energy = 1000
-            self.energyMax = 10000
-            self.energyGain = 1000
-            self.divideEnergy = 10000
+            self.energy = 250
+            self.energyMax = 2000
+            self.energyGain = 50
+            self.divideEnergy = 1000
             self.maxDivisions = 8
             self.color = (0, 0, 0)
 
