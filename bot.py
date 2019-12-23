@@ -1,6 +1,7 @@
 import random
 
 # Смысл жизни будет переосмыслён...
+#
 
 class Bot(object):
     def __init__(self, x, y, code):
