@@ -7,6 +7,7 @@ from bot import *
 WIDTH = 1100
 HEIGHT = 800
 FPS = 30
+
 pygame.init()
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.font.init()
@@ -129,7 +130,7 @@ def DrawField():
     # Двойная буферизация
     pygame.display.flip()
 
-
+# ОН НЕ ЗНАЕТ 
 def DrawStats():
     pygame.draw.rect(screen, (69, 69, 69), Rect(800, 0, 300, 800), 0)
     font = pygame.font.SysFont('Arial', 20)
